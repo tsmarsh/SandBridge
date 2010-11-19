@@ -1,10 +1,7 @@
 package com.tailoredshapes.sandbridge;
 
-import netscape.javascript.JSObject;
-
 import java.applet.Applet;
 import java.io.*;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 public class SandBridge extends Applet {
@@ -19,12 +16,11 @@ public class SandBridge extends Applet {
 
         public String run() {
             BufferedReader reader = null;
+
             StringBuilder bob = new StringBuilder();
 
             try {
                 reader = new BufferedReader(new FileReader(filename));
-
-
                 String line = reader.readLine();
 
                 while (line != null) {
@@ -44,36 +40,39 @@ public class SandBridge extends Applet {
 
             }
 
-            return bob.toString();    
+            return bob.toString();
         }
     }
 
-    private class FileSaver implements PrivilegedAction<Object> {
+    private class FileSaver implements PrivilegedAction<Boolean> {
 
         private String filename;
         private String contents;
 
-        public FileSaver( String filename, String contents) {
+        public FileSaver(String filename, String contents) {
             this.contents = contents;
             this.filename = filename;
         }
 
-        public Object run() {
+        public Boolean run() {
             FileWriter writer = null;
 
-            try{
+            try {
                 writer = new FileWriter(filename);
                 writer.write(contents);
-            } catch (IOException e){
-                throw new RuntimeException(e);  
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             } finally {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                if (writer != null) {
+                    try {
+
+                        writer.close();
+                    } catch (IOException e) {
+                        return false;
+                    }
                 }
             }
-            return null;
+            return true;
         }
     }
 
@@ -86,37 +85,39 @@ public class SandBridge extends Applet {
         }
 
         public Boolean run() {
-            try{
+            try {
                 File file = new File(filename);
                 return file.delete();
-            }catch(SecurityException e){
-                throw new RuntimeException(e);
+            } catch (SecurityException e) {
+                return false;
             }
         }
     }
 
     public void open(String filename, String callback) {
-        String fileContents = AccessController.doPrivileged(new FileOpener(filename));
-        String javascript = String.format("%s('%s');", callback, fileContents);
-
-        callback(javascript);
+        new Thread(
+                new ActionRunner(
+                        this,
+                        new FileOpener(filename),
+                        callback)
+        ).start();
     }
 
-    public void delete(String filename, String callback){
-        Boolean deleted = AccessController.doPrivileged(new FileDeleter(filename));
-
-        callback(String.format("%s(%s);", callback, deleted));
+    public void delete(String filename, String callback) {
+        new Thread(
+                new ActionRunner(
+                        this,
+                        new FileDeleter(filename),
+                        callback)
+        ).start();
     }
 
     public void save(String filename, String contents, String callback) {
-        System.out.println("Saving");
-        AccessController.doPrivileged(new FileSaver(filename, contents));
-
-        callback(String.format("%s();", callback));
-    }
-
-    private void callback(String javascript) {
-        JSObject window = JSObject.getWindow(this);
-        window.eval(javascript);
+        new Thread(
+                new ActionRunner(
+                        this,
+                        new FileSaver(filename, contents),
+                        callback)
+        ).start();
     }
 }
