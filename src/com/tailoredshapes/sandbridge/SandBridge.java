@@ -8,7 +8,7 @@ public class SandBridge extends Applet {
 
     private class FileOpener implements PrivilegedAction<String> {
 
-        private String filename;
+        private final String filename;
 
         public FileOpener(String filename) {
             this.filename = filename;
@@ -27,14 +27,15 @@ public class SandBridge extends Applet {
                     bob.append(line);
                     line = reader.readLine();
                 }
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             } finally {
                 if (reader != null) {
                     try {
                         reader.close();
                     } catch (IOException e) {
-                        throw new RuntimeException(e);
+                        //Not much we can do now.
                     }
                 }
 
@@ -46,8 +47,8 @@ public class SandBridge extends Applet {
 
     private class FileSaver implements PrivilegedAction<Boolean> {
 
-        private String filename;
-        private String contents;
+        private final String filename;
+        private final String contents;
 
         public FileSaver(String filename, String contents) {
             this.contents = contents;
@@ -65,10 +66,9 @@ public class SandBridge extends Applet {
             } finally {
                 if (writer != null) {
                     try {
-
                         writer.close();
                     } catch (IOException e) {
-                        return false;
+                        //Not much we can do now.
                     }
                 }
             }
@@ -78,7 +78,7 @@ public class SandBridge extends Applet {
 
     private class FileDeleter implements PrivilegedAction<Boolean> {
 
-        private String filename;
+        private final String filename;
 
         public FileDeleter(String filename) {
             this.filename = filename;
